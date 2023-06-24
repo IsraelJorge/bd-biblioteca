@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Cliente {
+  cpf           String @id @unique
+  nome_completo String
+  telefone      String
+  email         String @unique
+  endereco      String
+
+  status_cliente_id Int
+
+  //historico_cliente_id Int
+  // historicoClienteId HistoricoCliente @relation("historico_cliente_id", fields: [historico_cliente_id], references: [id])
+
+  statusClienteId StatusCliente @relation(fields: [status_cliente_id], references: [id])
+
+  historico_cliente HistoricoCliente[]
+  historico_livro   HistoricoLivro[]
+  Multa             Multa[]
+  Emprestimo        Emprestimo[]
+  Reserva           Reserva[]
+
+  //TODO: verificar duplicidade das relações
+  @@map("cliente")
+}
+
+model Livro {
+  isbn              String   @id @unique
+  titulo            String
+  numero_de_paginas Int
+  ano_de_publicacao DateTime
+
+  categoria_id    Int
+  autor_id        Int
+  editora_issn    String
+  status_livro_id Int
+
+  statusLivroId StatusLivro @relation(fields: [status_livro_id], references: [id])
+  editoraIssn   Editora     @relation(fields: [editora_issn], references: [issn])
+  autorId       Autor       @relation(fields: [autor_id], references: [id])
+  categoriaId   Categoria   @relation(fields: [categoria_id], references: [id])
+
+  historico_livro HistoricoLivro[]
+  Emprestimo      Emprestimo[]
+  Reserva         Reserva[]
+
+  @@map("livro")
+}
+
+model Autor {
+  id                 Int      @id @default(autoincrement())
+  nome_completo      String
+  data_nascimento    DateTime
+  descricao_do_autor String
+  nacionalidade      String
+
+  editora_issn String
+
+  editoraIssn Editora @relation(fields: [editora_issn], references: [issn])
+
+  livro Livro[]
+
+  @@map("autor")
+}
+
+model Editora {
+  issn           String @id @unique
+  nome           String
+  pais_de_origem String
+
+  livro Livro[]
+  autor Autor[]
+
+  @@map("editora")
+}
+
+model Categoria {
+  id             Int    @id @default(autoincrement())
+  nome_categoria String @unique
+
+  livro Livro[]
+
+  //TODO: verificar duplicidade das relações
+  @@map("categoria")
+}
+
+model Multa {
+  id                 Int      @id @default(autoincrement())
+  valor              Decimal
+  status             Boolean  @default(true)
+  data_de_vencimento DateTime
+  data_de_aplicacao  DateTime
+
+  cliente_cpf   String
+  emprestimo_id Int
+
+  emprestimoId Emprestimo @relation(fields: [emprestimo_id], references: [id])
+  clienteCpf   Cliente    @relation(fields: [cliente_cpf], references: [cpf])
+
+  historico_cliente HistoricoCliente[]
+
+  //TODO: verificar duplicidade das relações
+  @@map("multa")
+}
+
+model Emprestimo {
+  id                 Int      @id @default(autoincrement())
+  data_de_emprestimo DateTime
+  data_de_devolucao  DateTime
+
+  livro_isbn  String
+  cliente_cpf String
+
+  livroIsbn  Livro   @relation(fields: [livro_isbn], references: [isbn])
+  clienteCpf Cliente @relation(fields: [cliente_cpf], references: [cpf])
+
+  historico_cliente HistoricoCliente[]
+  historico_livro   HistoricoLivro[]
+  multa             Multa[]
+
+  //TODO: verificar duplicidade das relações entre tabela emprestimo e historico
+  @@map("emprestimo")
+}
+
+model Reserva {
+  id              Int      @id @default(autoincrement())
+  status          Boolean  @default(true)
+  data_de_reserva DateTime
+
+  livro_isbn  String
+  cliente_cpf String
+
+  livroIsbn  Livro   @relation(fields: [livro_isbn], references: [isbn])
+  clienteCpf Cliente @relation(fields: [cliente_cpf], references: [cpf])
+
+  historico_cliente HistoricoCliente[]
+  historico_livro   HistoricoLivro[]
+
+  //TODO: verificar duplicidade das relações entre tabela reserva e historico
+  @@map("reserva")
+}
+
+model HistoricoCliente {
+  id Int @id @default(autoincrement())
+
+  cliente_cpf   String
+  reserva_id    Int
+  emprestimo_id Int
+  multa_id      Int
+
+  multaId      Multa      @relation(fields: [multa_id], references: [id])
+  emprestimoId Emprestimo @relation(fields: [emprestimo_id], references: [id])
+  reservaId    Reserva    @relation(fields: [reserva_id], references: [id])
+  clienteCpf   Cliente    @relation(fields: [cliente_cpf], references: [cpf])
+
+  @@map("historico_cliente")
+}
+
+model HistoricoLivro {
+  id Int @id @default(autoincrement())
+
+  cliente_cpf   String
+  reserva_id    Int
+  emprestimo_id Int
+  livro_isbn    String
+
+  emprestimoId Emprestimo @relation(fields: [emprestimo_id], references: [id])
+  reservaId    Reserva    @relation(fields: [reserva_id], references: [id])
+  clienteCpf   Cliente    @relation(fields: [cliente_cpf], references: [cpf])
+  livro        Livro      @relation(fields: [livro_isbn], references: [isbn])
+
+  //TODO:Esquecemos de colocar o fk do livro
+  @@map("historico_livro")
+}
+
+model StatusCliente {
+  id          Int    @id @default(autoincrement())
+  nome_status String @unique
+
+  cliente Cliente[]
+
+  @@map("status_cliente")
+}
+
+model StatusLivro {
+  id          Int     @id @default(autoincrement())
+  nome_status String  @unique
+  Livro       Livro[]
+
+  @@map("status_livro")
+}
